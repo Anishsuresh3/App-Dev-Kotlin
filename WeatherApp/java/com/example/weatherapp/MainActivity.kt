@@ -1,29 +1,37 @@
 package com.example.weatherapp
 
+import android.Manifest
+import android.R.attr.apiKey
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
+import android.location.LocationManager
 import android.net.Uri
 import android.net.Uri.parse
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.PersistableBundle
+import android.provider.Settings
 import android.util.Log
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.MediaController
-import android.widget.TextView
-import android.widget.VideoView
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.toLowerCase
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet.Constraint
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.liveData
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import org.w3c.dom.Text
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import retrofit2.Response
+import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var current: Current
@@ -36,6 +44,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var status:TextView
     private lateinit var frame:FrameLayout
     private lateinit var rec:RecyclerView
+    private lateinit var Horizrec:RecyclerView
+    private lateinit var mFusedLocationClient: FusedLocationProviderClient
+    private val permissionId = 2
+    private var ll=""
+    private lateinit var sf: SharedPreferences
+    private lateinit var editor: SharedPreferences.Editor
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,20 +61,125 @@ class MainActivity : AppCompatActivity() {
         date = findViewById<TextView>(R.id.tvdate)
         status = findViewById<TextView>(R.id.tvstatus)
         frame = findViewById(R.id.FrameVideo)
+        val ref = findViewById<ImageButton>(R.id.refresh)
         val cons = findViewById<ConstraintLayout>(R.id.constraintLayout)
         val mediaController = MediaController(this)
         mediaController.setAnchorView(videoView)
-
+        sf = getSharedPreferences("Users Data", MODE_PRIVATE)
+        editor = sf.edit()
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         rec = findViewById<RecyclerView>(R.id.rcView)
         rec.layoutManager = LinearLayoutManager(this)
-
-        videoView.setOnPreparedListener{
-            mediaPlayer -> mediaPlayer.isLooping = true
+        Horizrec = findViewById<RecyclerView>(R.id.rcHorizontalView)
+        Horizrec.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        getLocation()
+        ref.setOnClickListener{
+            getLocation()
         }
+    }
+    @SuppressLint("MissingPermission", "SetTextI18n")
+    private fun getLocation(){
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                Log.i("kk","Till here")
+                mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+                    val location: android.location.Location? = task.result
+                    if (location != null) {
+                        val geocoder = Geocoder(this, Locale.getDefault())
+                        val list: List<Address> =
+                            geocoder.getFromLocation(location.latitude, location.longitude, 1)!!
+                        ll=list[0].locality
+                        editor.apply {
+                            putString("User_location",ll)
+                            commit() // if we don't commit then the values wont be saved
+                        }
+                        Log.i("dicc",ll)
+                    }
+                }
+                retrofitGetSequence()
+            } else {
+                Toast.makeText(this, "Please turn on location", Toast.LENGTH_LONG).show()
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivity(intent)
+            }
+        } else {
+            requestPermissions()
+        }
+    }
+    private fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
+    }
+    private fun checkPermissions(): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        return false
+    }
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ),
+            permissionId
+        )
+    }
+    @SuppressLint("MissingSuperCall")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == permissionId) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                getLocation()
+            }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        editor.apply {
+            putString("User_location",ll)
+            commit() // if we don't commit then the values wont be saved
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ll = sf.getString("User_location","").toString()
+    }
+
+
+
+    private fun forecastclicked(forecast : Forecastday){
+
+    }
+    private fun retrofitGetSequence(){
+        videoView.setOnPreparedListener{
+                mediaPlayer -> mediaPlayer.isLooping = true
+        }
+
         val retService = RetrofitInstance.getRetrofitInstance().create(currentW::class.java)
+        if(ll==""){
+            ll = sf.getString("User_location","").toString()
+        }
         val responseLiveData : LiveData<Response<Forecast>> = liveData {
-            val response = retService.getCurrentWeather()
-            emit(response) 
+            val response = retService.getCurrentWeather("4e7e70617e264e0eb40112916230305",ll,2,"no","no")
+            emit(response)
         }
         responseLiveData.observe(this, Observer {
             val cur = it.body();
@@ -67,6 +187,15 @@ class MainActivity : AppCompatActivity() {
                 current= cur.current
                 location = cur.location
                 forecastList = cur.forecast.forecastday.listIterator()
+                var hourday1 = forecastList.next().hour
+                var hourday2 = forecastList.next().hour
+                var index = current.last_updated.subSequence(11,13).toString().toInt()
+                Horizrec.adapter = HorizontalViewAdapter(
+                    ArrayList<Hour>().apply {
+                        addAll(hourday1.subList(index, hourday1.size))
+                        addAll(hourday2.subList(0, index+1))
+                    },index,packageName,current.is_day
+                )
                 rec.adapter = ViewAdapter(
                     cur.forecast.forecastday,current
                 ){ selectedItem: Forecastday ->
@@ -76,16 +205,9 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-    private fun forecastclicked(forecast : Forecastday){
-
-    }
     private fun setAll(current: Current, location: Location, forecastList : ListIterator<Forecastday>){
         val deg = findViewById<TextView>(R.id.tvdegrees)
         val back = findViewById<ConstraintLayout>(R.id.weather)
-        var imgList = listOf<ImageView>(findViewById(R.id.im1),findViewById(R.id.im2),findViewById(R.id.im3),findViewById(R.id.im4),findViewById(R.id.im5),findViewById(R.id.im6),findViewById(R.id.im7),findViewById(R.id.im8),findViewById(R.id.im9),findViewById(R.id.im10),findViewById(R.id.im11),findViewById(R.id.im12),findViewById(R.id.im13),findViewById(R.id.im14),findViewById(R.id.im15),findViewById(R.id.im16),findViewById(R.id.im17),findViewById(R.id.im18),findViewById(R.id.im19),findViewById(R.id.im20),findViewById(R.id.im21),findViewById(R.id.im22),findViewById(R.id.im23),findViewById(R.id.im24))
-        val list_of_card24 = listOf<CardView>(findViewById(R.id.card1),findViewById(R.id.card2),findViewById(R.id.card3),findViewById(R.id.card4),findViewById(R.id.card5),findViewById(R.id.card6),findViewById(R.id.card7),findViewById(R.id.card8),findViewById(R.id.card9),findViewById(R.id.card10),findViewById(R.id.card11),findViewById(R.id.card12),findViewById(R.id.card13),findViewById(R.id.card14),findViewById(R.id.card15),findViewById(R.id.card16),findViewById(R.id.card17),findViewById(R.id.card18),findViewById(R.id.card19),findViewById(R.id.card20),findViewById(R.id.card21),findViewById(R.id.card22),findViewById(R.id.card23),findViewById(R.id.card24))
-        var listofIds = listOf<TextView>(findViewById(R.id.tvhour1),findViewById(R.id.tvhour2),findViewById(R.id.tvhour3),findViewById(R.id.tvhour4),findViewById(R.id.tvhour5),findViewById(R.id.tvhour6),findViewById(R.id.tvhour7),findViewById(R.id.tvhour8),findViewById(R.id.tvhour9),findViewById(R.id.tvhour10),findViewById(R.id.tvhour11),findViewById(R.id.tvhour12),findViewById(R.id.tvhour13),findViewById(R.id.tvhour14),findViewById(R.id.tvhour15),findViewById(R.id.tvhour16),findViewById(R.id.tvhour17),findViewById(R.id.tvhour18),findViewById(R.id.tvhour19),findViewById(R.id.tvhour20),findViewById(R.id.tvhour21),findViewById(R.id.tvhour22),findViewById(R.id.tvhour23),findViewById(R.id.tvhour24))
-        var listofIdsforTemp = listOf<TextView>(findViewById(R.id.tvhourdegree1),findViewById(R.id.tvhourdegree2),findViewById(R.id.tvhourdegree3),findViewById(R.id.tvhourdegree4),findViewById(R.id.tvhourdegree5),findViewById(R.id.tvhourdegree6),findViewById(R.id.tvhourdegree7),findViewById(R.id.tvhourdegree8),findViewById(R.id.tvhourdegree9),findViewById(R.id.tvhourdegree10),findViewById(R.id.tvhourdegree11),findViewById(R.id.tvhourdegree12),findViewById(R.id.tvhourdegree13),findViewById(R.id.tvhourdegree14),findViewById(R.id.tvhourdegree15),findViewById(R.id.tvhourdegree16),findViewById(R.id.tvhourdegree17),findViewById(R.id.tvhourdegree18),findViewById(R.id.tvhourdegree19),findViewById(R.id.tvhourdegree20),findViewById(R.id.tvhourdegree21),findViewById(R.id.tvhourdegree22),findViewById(R.id.tvhourdegree23),findViewById(R.id.tvhourdegree24))
         val uri: Uri
         val appTemp = findViewById<TextView>(R.id.tvAppT)
         val humid = findViewById<TextView>(R.id.tvhumidPer)
@@ -99,7 +221,7 @@ class MainActivity : AppCompatActivity() {
         val list_of_texts = listOf<TextView>(deg,appTemp,humid,windSpeed,uv,dis,airPressure,wind_dir,wed_details,loc,temp,date,status,findViewById(R.id.tvappTemp),findViewById(R.id.tvhumidity),findViewById(R.id.tvwind),findViewById(R.id.ultra),findViewById(R.id.tvVisibility),findViewById(R.id.tvairPressure))
         if("rain" in current.condition.text){
             if(current.is_day==1){
-                uri = parse("android.resource://"+packageName+"/"+R.raw.pexels2)
+                uri = parse("android.resource://"+ packageName +"/"+R.raw.pexels2)
                 videoView.setVideoURI(uri)
                 videoView.start()
                 back.setBackgroundColor(ContextCompat.getColor(this, R.color.background_dayRain))
@@ -115,10 +237,7 @@ class MainActivity : AppCompatActivity() {
                     android.R.color.system_accent2_800
                 ))
                 list_of_cards.forEach({e -> e.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.system_accent2_800))})
-                list_of_card24.forEach({e -> e.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.system_accent2_800))})
                 list_of_texts.forEach({e -> e.setTextColor(ContextCompat.getColor(this, R.color.white))})
-                listofIds.forEach({e -> e.setTextColor(ContextCompat.getColor(this, R.color.white))})
-                listofIdsforTemp.forEach({e -> e.setTextColor(ContextCompat.getColor(this, R.color.white))})
             }
             videoView.setVideoURI(uri)
             videoView.start()
@@ -151,78 +270,5 @@ class MainActivity : AppCompatActivity() {
         dis.text = "${current.vis_km} Km"
         airPressure.text = "${current.pressure_mb} hPa"
         wind_dir.text = "${current.wind_dir} wind"
-
-        var index = current.last_updated.subSequence(11,13).toString().toInt()
-        Log.i("MyI","${location.localtime}")
-        var i =0
-        while (forecastList.hasNext()){
-            val day = forecastList.next()
-            if(index>=24){
-                index = current.last_updated.subSequence(11,13).toString().toInt()
-                var t=0
-                while(t<index){
-                    var hour = day.hour[t]
-                    var t1 = listofIds[i]
-                    var t1_temp = listofIdsforTemp[i]
-                    t1.text = if(hour.time.subSequence(11, 13).toString().toInt()<12) "${hour.time.subSequence(11, 13)}:00 AM" else "${hour.time.subSequence(11, 13)}:00 PM"
-                    t1_temp.text = "${hour.temp_c} C"
-                    var imgg = imgList[i]
-                    select_img(hour,imgg)
-                    t++
-                    i++
-                }
-            }
-            else{
-                while (index < 24) {
-                    var hour = day.hour[index]
-                    var t1 = listofIds[i]
-                    var t1_temp = listofIdsforTemp[i]
-                    t1.text = if(hour.time.subSequence(11, 13).toString().toInt()<12) "${hour.time.subSequence(11, 13)}:00 AM" else "${hour.time.subSequence(11, 13)}:00 PM"
-                    t1_temp.text = "${hour.temp_c} C"
-                    var imgg = imgList[i]
-                    select_img(hour,imgg)
-                    index++
-                    i++
-                }
-            }
-        }
-    }
-    fun select_img(hour : Hour,imgg : ImageView){
-        if("rain" in hour.condition.text){
-            var urI = parse("android.resource://"+packageName+"/"+R.drawable.raining)
-            imgg.setImageURI(urI)
-        }
-        else if("clear" in hour.condition.text.lowercase()){
-            if(hour.is_day==0) {
-                var urI =
-                    parse("android.resource://" + packageName + "/" + R.drawable.clear_night)
-                imgg.setImageURI(urI)
-            }
-            else{
-                var urI =
-                    parse("android.resource://" + packageName + "/" + R.drawable.clear_day)
-                imgg.setImageURI(urI)
-            }
-        }
-        else if("thunder" in hour.condition.text.lowercase()){
-            var urI = parse("android.resource://"+packageName+"/"+R.drawable.raining_lightning)
-            imgg.setImageURI(urI)
-        }
-        else if("sunny" in hour.condition.text.lowercase()){
-            var urI = parse("android.resource://"+packageName+"/"+R.drawable.clear_day)
-            imgg.setImageURI(urI)
-        }
-        else if("partly" in hour.condition.text.lowercase()){
-            if(hour.is_day==1) {
-                var urI =
-                    parse("android.resource://" + packageName + "/" + R.drawable.day_sky)
-                imgg.setImageURI(urI)
-            }
-            else {
-                var urI =
-                    parse("android.resource://" + packageName + "/" + R.drawable.night_sky)
-                imgg.setImageURI(urI)
-            }
-        }
     }
 }
