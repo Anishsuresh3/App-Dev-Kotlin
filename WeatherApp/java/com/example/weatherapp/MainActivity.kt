@@ -24,6 +24,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private var ll=""
     private lateinit var sf: SharedPreferences
     private lateinit var editor: SharedPreferences.Editor
+    private lateinit var viewModel : LocationViewModel
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,10 +74,19 @@ class MainActivity : AppCompatActivity() {
         rec.layoutManager = LinearLayoutManager(this)
         Horizrec = findViewById<RecyclerView>(R.id.rcHorizontalView)
         Horizrec.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        getLocation()
+        viewModel = ViewModelProvider(this).get(LocationViewModel::class.java)
+        viewModel.getlocation()
+        viewModel.loc.observe(this,Observer {
+            ll=it
+            retrofitGetSequence()
+        })
         ref.setOnClickListener{
-            getLocation()
+            viewModel.getlocation()
         }
+//        getLocation()
+//        ref.setOnClickListener{
+//            getLocation()
+//        }
     }
     @SuppressLint("MissingPermission", "SetTextI18n")
     private fun getLocation(){
