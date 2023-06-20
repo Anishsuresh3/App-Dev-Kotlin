@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Customize other style attributes -->
+        <item name="toolbarStyle">@style/AppToolbarStyle</item>
+    </style>
+
+    <!-- Toolbar style -->
+    <style name="AppToolbarStyle" parent="Widget.MaterialComponents.Toolbar">
+        <!-- Customize toolbar attributes -->
+        <item name="android:background">#BAA5F4</item>
+<!--        <item name="android:titleTextColor">#FFFFFF</item>-->
+        <!-- Add more toolbar customizations as needed -->
+    </style>
+</resources>

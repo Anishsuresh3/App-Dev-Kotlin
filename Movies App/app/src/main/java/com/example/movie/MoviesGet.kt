@@ -20,4 +20,16 @@ interface MoviesGet {
         @Query("language") language: String = "en-US",
         @Query("page") page: Int = 1
     ): Response<Movies>
+    @GET("search/movie")
+    suspend fun getMovie(
+        @Query("query") query: String="Movie",
+        @Query("include_adult") include_adult: Boolean=false,
+        @Query("language") language: String = "en-US",
+        @Query("page") page: Int = 1
+    ): Response<Movies>
+    @GET("find")
+    suspend fun getMoviesById(
+        @Query("") external_id : String = "",
+        @Query("external_source") external_source: String = "tvdb_id"
+    ): Response<Movies>
 }

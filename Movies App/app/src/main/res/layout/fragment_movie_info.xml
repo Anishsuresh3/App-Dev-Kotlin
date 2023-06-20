@@ -43,6 +43,7 @@
                 android:id="@+id/tvMovieName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
                 android:text="TextView"
                 android:textColor="@color/white"
                 android:textSize="34sp"
@@ -52,22 +53,46 @@
                 android:id="@+id/tvGenres"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginBottom="10dp"
                 android:text="TextView"
                 android:textColor="#CAC5F4"
                 android:textSize="20sp" />
 
             <TextView
+                android:id="@+id/tvrate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="Ratings:"
+                android:textColor="#F4CC91"
+                android:textSize="16sp" />
+
+            <TextView
                 android:id="@+id/tvRating"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginBottom="10dp"
                 android:text="TextView"
                 android:textColor="#F8990C"
                 android:textSize="20sp" />
 
             <TextView
+                android:id="@+id/tvdesc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="Description:"
+                android:textColor="#C2D8EB"
+                android:textSize="16sp" />
+
+            <TextView
                 android:id="@+id/tvDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="25dp"
                 android:text="TextView"
                 android:textColor="#E4E2FA"
                 android:textSize="20sp" />
@@ -76,12 +101,38 @@
                 android:id="@+id/btnShow"
                 android:layout_width="wrap_content"
                 android:layout_height="35dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginBottom="15dp"
                 android:backgroundTint="#060722"
                 android:text="more..."
                 android:textAlignment="textStart"
                 android:textAllCaps="false"
                 android:textColor="#5F76F8"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvwantowatch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="Want to Watch"
+                android:textColor="#C9C7C7"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/btnwatchlist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginBottom="15dp"
+                android:backgroundTint="#F0F0F6"
+                android:text="Add to Watchlist"
+                android:textAlignment="textStart"
+                android:textAllCaps="false"
+                android:textColor="@color/black"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                app:cornerRadius="20dp" />
 
         </LinearLayout>
     </ScrollView>
